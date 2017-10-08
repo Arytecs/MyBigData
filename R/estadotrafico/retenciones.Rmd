@@ -1,0 +1,71 @@
+Estudio retenciones en Valencia
+========================================================
+
+Vamos a estudiar  datos históricos de retenciones en Valencia 
+# Carga de Datos
+Cargamos Datos y vemos qué pinta tienen,
+
+```{r}
+load("totr.Rdata")
+
+dat<-tot
+
+head(tot)
+
+```
+# Formateo de Datos
+Vamos a formatear los datos
+```{r}
+fecha<-paste(as.character(dat[,1]),as.character(dat[,2]),as.character(dat[,3]),sep="-")
+#diasem<-as.POSIXlt(as.Date(fecha))$wday
+## añadimos fecha y diasem
+dat$fecha<-fecha
+#dat$diasem<-diasem
+
+max(fecha)
+min(fecha)
+
+filt<-subset(dat,id==168 & fecha==as.POSIXlt("2015-3-3"))
+print(filt)
+dim(filt)
+
+```
+
+De acuerdo a la web
+Estados
+0. Fluido
+1. Denso
+2. Congestionado
+3. Cortado
+
+Si hay otros estados los ponemos a 4 desconocido.
+Y lo trasnformamos en factor
+
+```{r}
+sum(is.na(dat$estat))
+
+table(dat$estat)
+dat[which(dat$estat>3),"estat"]<-4
+table(dat$estat)
+#festat guarda estat como factor
+dat$festat = factor(dat$estat, levels = 0:4, labels = c("fluido", "denso","Congestionado","Cortado","Desconocido"))
+table(dat$festat)
+
+#atasco es un booleano, con NA para desconocidos
+atasco = rep(0,length(dat$estat))
+atasco [which(dat$estat==1)]<-1
+atasco [which(dat$estat==2)]<-1
+atasco [which(dat$estat>3)]<-NA
+dat$atasco<-atasco
+table(dat$atasco)
+#eliminamos los registros con NA en atasco
+dat<-subset(dat,is.na(atasco)==FALSE)
+```
+
+# Ejercicios
+
+1. ¿Cuál fue el peor día ?(día con más congestiones). Se puede utilizar Date$yday
+2. ¿Cuál es el peor tramo? (Tramo con  más congestiones).
+3. ¿Cuál es peor y el mejor día de la semana? .  Se puede utilizar Date$wday
+4. ¿Las fallas incremetan las congestiones?. Considerar Fallas del 16 al 19 de marzo (incluidos)
+

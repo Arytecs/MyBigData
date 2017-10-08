@@ -1,0 +1,23 @@
+1) Cúal es la media de las chicos y las chicas en Math en Write?
+
+by(d[, 8:9], d$female, colMeans)
+
+2) qúien es el mejor estudiante (de acuerdo a la media)? Considera "read write math science socst". Qué media obtiene? Se puede usar "which".
+
+which(rowMeans(d[, 7:11])==max(rowMeans(d[, 7:11])))
+
+3) Calcula la media en write y read de los elementos female==1, race==2
+
+colMeans(subset(d, female==1 & race==2)[,c("write","read")])
+
+
+4) Si consideramos los 8 posibles subgrupos considerando "race" y "female", cúal es el mejor subgrupo de acuerdo a la media global?
+
+
+*********
+average<-rowMeans(d[, 7:11])
+d1<-cbind(d,average)
+lista<-by(d1[, c("average",)], list(d$ses,d$female), mean)
+
+mivec<-unlist(lista)
+sort(mivec[seq(1, length(mivec), 2)])

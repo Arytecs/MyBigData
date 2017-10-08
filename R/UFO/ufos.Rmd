@@ -1,0 +1,198 @@
+# Descubriendo OVNIS (Machine Learning for Hackers)
+
+Disponemos de una base de datos de 60000 avistamientos UFO recopilada por Infochimps.com. 
+Los datos recopilan avistamientos desde hace d?cadas en todo el mundo, aunque principalmente se localizan en USA. Nos gustar?a analizar los datos para intentar averiguar si hay patrones temporales y si existen diferencias significativas entre estados de USA.
+
+Comenzamos cargando los datos desde el fichero tsv
+
+```{r}
+library(ggplot2)
+ufo<-read.delim("ufo_awesome.tsv", sep="\t", stringsAsFactors=FALSE,
+                header=FALSE, na.strings="")
+
+summary(ufo)
+head (ufo)
+```
+
+Como se puede observar ya tenemos los datos correctamente.  Disponemos de 61870 observaciones, y cada observaci?n consta de 5 campos. Aunque estos campos no est?n correctamente etiquetados ni formateados.
+
+## Limpieza de datos
+
+### Fechas
+  
+```{r}
+
+names(ufo)<-c("DateOccurred","DateReported","Location","ShortDescription",
+              "Duration","LongDescription")
+
+```
+
+Tras etiquetar a las columnas, procedemos a formatear los campos. Utilizamos as.Date para convertir de texto a formato date.
+  
+```{r}
+#ufo$DateOccurred<-as.Date(ufo$DateOccurred, format="%Y%m%d")
+```
+
+Parece ser que hay problemas con alg?n registro al realizar la conversi?n (datos reales). Necesitamos realizar alg?n tipo de limpieza en los datos
+
+
+```{r}
+head(ufo[which(nchar(ufo$DateOccurred)!=8 | nchar(ufo$DateReported)!=8),1])
+
+```
+
+Como podemos ver existen registros donde en los campos de fechas se almacena informaci?n que no es v?lida. Procedamos a filtarlos
+
+```{r}
+good.rows<-ifelse(nchar(ufo$DateOccurred)!=8 | nchar(ufo$DateReported)!=8,FALSE, TRUE)
+length(which(!good.rows))
+ufo<-ufo[good.rows,]
+```
+
+Eliminamos 731 registros, considerando que partimos de m?s de 61000 no supone una p?rdida importante.
+
+```{r}
+ufo$DateOccurred<-as.Date(ufo$DateOccurred, format="%Y%m%d")
+```
+
+Ahora la conversi?n ha t?nido ?xito.
+
+### Localizaci?n
+
+El siguiente paso consiste en intentar extraer mediante el uso de expresiones regulares informaci?n sobre la localizaci?n de cada observaci?n
+
+```{r}
+
+get.location<-function(l) {
+  split.location<-tryCatch(strsplit(l,",")[[1]], error= function(e) return(c(NA, NA)))
+  clean.location<-gsub("^ ","",split.location)
+  if (length(clean.location)>2) {
+    return(c(NA,NA))
+  }
+  else {
+    return(clean.location)
+  }
+}
+
+
+city.state<-lapply(ufo$Location, get.location)
+head(city.state)
+```
+
+De esta manera disponemos de una lista de localidades y estados de cada observaci?n. El siguiente paso es incorporar esa informaci?n a la tabla.
+
+```{r}
+
+location.matrix<-do.call(rbind, city.state)
+ufo<-transform(ufo, USCity=location.matrix[,1], USState=tolower(location.matrix[,2]),
+               stringsAsFactors=FALSE)
+summary(ufo)
+```
+
+De esta manera hemos a?adido dos columnas nuevas con la informaci?n al dataframe.
+
+A continuaci?n, marcamos como NA los estados y ciudades que no pertenecen a USA (Canada)
+
+```{r}
+us.states<-c("ak","al","ar","az","ca","co","ct","de","fl","ga","hi","ia","id","il",
+             "in","ks","ky","la","ma","md","me","mi","mn","mo","ms","mt","nc","nd","ne","nh",
+             "nj","nm","nv","ny","oh","ok","or","pa","ri","sc","sd","tn","tx","ut","va","vt",
+             "wa","wi","wv","wy")
+
+ufo$USState<-us.states[match(ufo$USState,us.states)]
+ufo$USCity[is.na(ufo$USState)]<-NA
+```
+
+Y eliminamos esos registros
+
+```{r}
+ufo.us<-subset(ufo, !is.na(USState))
+head(ufo.us)
+```
+
+## Agregando y organizando los datos
+
+Una vez hemos formateado la informaci?n podemos comenzar con el an?lisis de los datos.
+Lo primero que hacemos es comprobar c?mo se distribuyen las fechas de las observaciones.
+
+```{r}
+
+summary(ufo.us$DateOccurred)
+```
+
+Parece ser que la primera fecha parece un dato an?malo. Lo verificamos con un histograma.
+
+```{r}
+ggplot(ufo.us, aes(x=DateOccurred))+geom_histogram()
+```
+
+Ciertamente, el histograma as? lo demuestra, as? que procedemos a filtrar datos antiguos.
+
+```{r}
+ufo.us<-subset(ufo.us, DateOccurred>=as.Date("1990-01-01"))
+nrow(ufo.us)
+```
+
+Con este filtro nos quedamos con cerca de 46000 observaciones. El histograma respresenta ahora mejor la informaci?n a ser tratada.
+
+```{r}
+ggplot(ufo.us, aes(x=DateOccurred))+geom_histogram()
+```
+
+El siguiente paso es aislar el a?o para poder agregar de manera sencilla la informaci?n. Creamos una nueva column con el a?o.
+
+```{r}
+ufo.us$YearMonth<-strftime(ufo.us$DateOccurred, format="%Y-%m")
+```
+Con la funci?n "ddply"" de "plyr" construimos de manera eficiente una tabla que agrupa avistamientos por a?o y estado
+
+```{r}
+require (plyr)
+sightings.counts<-ddply(ufo.us,.(USState,YearMonth), nrow)
+head(sightings.counts)
+```
+
+Sin embargo tenemos el problema de que los meses sin avistamientos no aparecen. Por lo tanto debemos crear de manera manual esas entradas a 0.
+
+```{r}
+date.range<-seq.Date(from=as.Date(min(ufo.us$DateOccurred)),
+                     to=as.Date(max(ufo.us$DateOccurred)), by="month")
+date.strings<-strftime(date.range, "%Y-%m")
+```
+
+
+Cruzamos las fechas con los estados para producir las posibles combinaciones.
+```{r}
+states.dates<-lapply(us.states,function(s) cbind(s,date.strings))
+states.dates<-data.frame(do.call(rbind, states.dates), stringsAsFactors=FALSE)
+head(states.dates)
+```
+
+Con "merge" mezclamos las dos tablas, las que no se rellenen se complentan con "NA"
+
+```{r}
+all.sightings<-merge(states.dates,sightings.counts,by.x=c("s","date.strings"),
+                     by.y=c("USState","YearMonth"),all=TRUE)
+head(all.sightings)
+```
+
+Ahora podemos ver que los meses sin avistamientos est?n a NA. Lo ?ltimo que nos falta es cambiar los "NA" por 0, y formatear correcatemente las columnas de fecha y estado. Adem?s de dar nombres significativos a las columnas.
+ 
+
+```{r}
+names(all.sightings)<-c("State","YearMonth","Sightings")
+all.sightings$Sightings[is.na(all.sightings$Sightings)]<-0
+all.sightings$YearMonth<-as.Date(rep(date.range,length(us.states)))
+all.sightings$State<-as.factor(toupper(all.sightings$State))
+```
+
+Finalmente podemos digujar un gr?fico donde podamos observar de manera conjunta la evoluci?n de los avistamientos para todos los estados en el periodo de tiempo deseado.
+
+```{r}
+ggplot(all.sightings, aes(x=YearMonth,y=Sightings))+
+  geom_line(aes())+
+  facet_wrap(~State,nrow=10,ncol=5)+ #partimos en 50 plots
+  theme_bw()+ # tema
+    xlab("Time")+ylab("Number of Sightings")
+
+```

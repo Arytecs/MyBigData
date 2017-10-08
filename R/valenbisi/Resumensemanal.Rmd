@@ -1,0 +1,129 @@
+
+# Uso de Valenbici 
+
+Disponemos de una base de datos con el uso de una estación de Valenbici (Guillem de Castro)
+
+Cargamos datos:
+```{r}
+file<-"estacion_1_2011_2014.csv"
+dat<-read.csv(file,sep=";")
+head(dat)
+```
+
+Los datos disponen de 8 atributos, aunque en nuestro caso sólo nos interesan la fecha, hora y avg_available, que representa las bicis disponibles en la estación.
+
+```{r}
+numrows<-length(dat[,1])
+
+print("num days")
+print (numrows/7)
+
+print("fecha inicial")
+dat[1,2]
+
+print("fecha final")
+dat[numrows,2]
+
+
+```
+
+Los datos empezaron a recopilarse a finales de 2011 y la última fecha disponible es el 9 de julio de 2014.
+A continuación realizamos un estudio del uso por hora. Para ello realizamos un agrupamiento por día de la semana y hora.
+
+```{r}
+
+diasem<-as.POSIXlt(as.Date(dat[,2]))$wday
+diasem[which(diasem==0)]<-7 # el 0 es domingo
+
+dat$diasem<-diasem #añadimos el dia de la semana como columna al dataframe
+
+xhoradia<-by(dat[,c("avg_available","med_available")],list(dat$hour,dat$diasem),colMeans)
+xhora<-by(dat[,c("avg_available","med_available")],dat$hour,colMeans)
+
+#deshacemos la lista, tomando sólo avg_available
+xhora<-unlist(xhora)[seq(1,48,2)]
+
+xhoradia<-unlist(xhoradia)[seq(1,336,2)]
+#trasnformo xhoradia matriz dia*hora
+mhoradia<-matrix(xhoradia,24,7)
+
+```
+
+Tras el agrupamiento podemos mostrar el número de bicis libres dependiendo de la hora.
+
+```{r}
+plot(xhora,lty=1,type="l", ylab="Free Bicycles", xlab="hours",xlim=c(0,24),main="Guillem de Castro. Day Average",col="red")
+
+
+```
+
+O bien mostrar de manera separada la información para cada día de la semana.
+
+```{r}
+
+plot(mhoradia[,1],lty=1,type="l", ylab="Free Bicycles", xlab="hours", ylim=c(1,10), col=1,xlim=c(0,24),main="Day Average ")
+
+
+
+for ( i in 2:7)
+{
+lines(mhoradia[,i], lty=i,col=i,xlim=c(0,24),main="Guillem de Castro.01/01/2014-31/05/2014. Day Average ")          
+}
+legend('top',c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"), col=c(1:7), lty=1:7,cex=0.8)
+```
+## Ejercicio
+
+Sobre los datos presentes, realizar un estudio que permita resolver las siguientes dudas:
+* Cuál es el día con menos bicicletas libres?
+* Cuál es el día con más bicicletas libres?
+* Cuál es el mes con menos bicicletas libres?
+* Cambia el uso de la estación entre verano e invierno?
+* Afectan las fallas al comportamiento de la estación?
+
+
+## Predicción de bicicletas libres (3 horas antes)
+```{r}
+fechas<-as.POSIXlt(as.Date(dat[,"date"]))
+datos<-data.frame(diames=fechas$mday,mes=fechas$mon,anyo=fechas$year,hora=dat[,"hour"],diasem=fechas$wday,bicis=dat[,"med_available"])
+
+###add 3 hours in advance
+prev3h<-rep(NA,length(datos[["bicis"]]))
+for (i in 4: length(datos[["bicis"]])) prev3h[i]<-datos[(i-3),"bicis"]
+datos[["prev3h"]]<-prev3h
+
+###add 24 hours in advance
+prev24h<-rep(NA,length(datos[["bicis"]]))
+for (i in 25: length(datos[["bicis"]])) prev24h[i]<-datos[(i-24),"bicis"]
+datos[["prev24h"]]<-prev24h
+
+#tomamos 2011, 2012 y 2013 y principio de 2014 como train y  finales de 2014 como test
+train<-subset(datos, anyo<114 |(anyo==114 & mes <6))
+test<-subset(datos, anyo>113 & mes>5)
+
+##aprendemos modelo por regresion lineal
+model<-lm(bicis ~ ., data=train)
+preds<-predict(model, newdata = test)
+
+###funcion para calcular error
+mae <-function (preds,values)
+{
+  vals<-na.omit(abs(preds-values))
+  mae<-mean(vals)
+  mae
+}
+print("error medio")
+print(mae(as.numeric(preds),test[["bicis"]]))
+
+plot(test[["bicis"]],lty=1,type="l", ylab="Free Bicycles", xlab="hours", ylim=c(1,15), col=1,xlim=c(0,length(test[,1])),main="Predicted Available Bikes")
+
+lines(preds,col="red",xlim=c(0,30))    
+```
+
+## Ejercicio
+
+Mejorar la predicción
+* Festivos
+* Dia de la semana no numérico
+* Atributos nuevos (12 horas antes, una semana antes, un año)
+* Tiempo
+* Otras técnicas

@@ -1,0 +1,17 @@
+1) Cúal es la media de las chicos y las chicas en "Math"? y en "Write"?
+
+
+
+2) qúien es el mejor estudiante (de acuerdo a la media)? Considera "read write math science socst". Qué media obtiene? Se puede usar "which".
+
+
+
+3) Calcula la media en write y read de los elementos female==1, race==2
+
+
+4) Si consideramos los 8 posibles subgrupos considerando "race" y "female", cúal es el mejor subgrupo de acuerdo a la media global?
+
+
+
+
+
