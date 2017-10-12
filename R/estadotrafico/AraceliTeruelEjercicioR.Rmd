@@ -1,0 +1,76 @@
+Estudio retenciones en Valencia
+========================================================
+
+Cargamos los datos
+
+```{r cars}
+load("totr.Rdata")
+head(tot)
+dat<-tot
+```
+
+#Formateo de datos
+```{r}
+fecha<-paste(as.character(dat[,1]),as.character(dat[,2]),as.character(dat[,3]),sep="-")
+dat$fecha<-fecha
+dat$fecha<-as.Date(dat$fecha)
+```
+
+#Comprobación estados nulos
+```{r}
+sum(is.na(dat$estat))
+```
+
+Como la suma de NA es nulo, significa que todas las filas están con datos en el estado, por lo que podemos proseguir el estudio.
+
+De acuerdo a la web
+Estados
+0. Fluido
+1. Denso
+2. Congestionado
+3. Cortado
+
+1. ¿Cuál fue el peor día ?(día con más congestiones)
+```{r}
+#atasco es un booleano, con NA para desconocidos
+atasco = rep(0,length(dat$estat))
+atasco [which(dat$estat==1)]<-1
+atasco [which(dat$estat==2)]<-1
+atasco [which(dat$estat>3)]<-NA
+dat$atasco<-atasco
+dat<-subset(dat,is.na(atasco)==FALSE)
+```
+
+Agrupamos por fechas y calculamos las medias de atasco para cada fecha
+```{r}
+estadoAtasco<-by(dat[,"atasco"], dat$fecha, mean)
+which.max(estadoAtasco)
+max(estadoAtasco)
+```
+Comprobamos que el día con más congestiones es el día 12 de Febrero del 2015
+
+2. ¿Cuál es el peor tramo? (Tramo con  más congestiones).
+```{r}
+tramos.medias<-by(dat[,"atasco"], dat$id, mean)
+max(tramos.medias)
+maxValue<-which.max(tramos.medias)
+maxValue<-tramos.medias[as.integer(maxValue)]
+dat[dat$id==22,"carrer"][1]
+```
+Vemos que el peor tramo es el de Peris y valero hacia Ausias March
+
+
+3. ¿Cuál es peor y el mejor día de la semana?
+```{r}
+diaSemana<-as.POSIXlt(dat$fecha)$wday
+dat$diaSem<-diaSemana
+diaSemana.media<-by(dat[,"atasco"], dat$diaSem, mean)
+which.max(diaSemana.media)
+which.min(diaSemana.media)
+```
+El peor día de la semana es el Jueves, y el mejor (con menos congestión) el domingo.
+
+4. ¿Las fallas incremetan las congestiones?. Considerar Fallas del 16 al 19 de marzo (incluidos)
+```{r}
+dat.fallas<-subset(dat, dat$fecha<)
+```

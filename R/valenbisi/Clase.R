@@ -24,6 +24,7 @@ dat$diasem<-diasem
 head(dat)
 
 xhoradia<-by(dat[,c("avg_available","med_available")],list(dat$hour,dat$diasem),colMeans)
+xhoradia
 xhora<-by(dat[,c("avg_available","med_available")],dat$hour,colMeans)
 head(xhora)
 xhora
