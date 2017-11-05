@@ -1,0 +1,89 @@
+---
+title: "Ejercicio"
+output: html_document
+---
+
+Cargamos datos. Hay que añadir el parámetro sep ya que de lo contrario encuentra errores. Una vez cargado lo guardamos en formato RData y a partir de ahí para cargar los datos solo tenemos que hacer el load.
+```{r}
+Datos.Jaen<-read.table("JaenIndicadores.txt", sep="\t", header = T, fileEncoding = "latin1", na.strings = c("..", "-", ""))
+load("JaenIndicadores.RData")
+#Andalucia<-read.table("Andalucia.txt", sep = "\t")
+```
+
+Cambiamos el nombre a las variables
+```{r}
+colnames(Datos.Jaen)<-c("CodigoINE", "Municipio", "ConsumoEE", "ConsumoAguaInv", "ConsumoAguaVer", "ResiduosSolidosDest", "ResiduosSolidosCant", "Poblacion")
+```
+
+Vemos de qué trata estos datos con un summary
+```{r}
+summary(Datos.Jaen)
+```
+
+Vemos que la columna ResiduosSolidosCant que debería ser numérico, lo coge como cadena ya que no entiende los decimales con ',' así que vamos a hacer una transformación primero de ',' por '.' y lo convertimos a numerico
+
+```{r}
+Datos.Jaen$ResiduosSolidosCant<-as.numeric(gsub(",", ".", Datos.Jaen$ResiduosSolidosCant))
+summary(Datos.Jaen)
+head(Datos.Jaen)
+```
+
+
+2. Recodificar la variable Poblacion en una variable cualitativa tipo factor llamada Tamaño con tres categorías:
+- Si la población es inferior a 2000 habitantes, Tamaño será “Pequeño”.
+- Si la población está entre 2000 y 4500 habitantes, Tamaño será “Mediano”.
+- Si la población es superior a 4500 habitantes, Tamaño será “Grande”.
+```{r}
+Datos.Jaen$Tamanyo<-ifelse(Datos.Jaen$Poblacion < 2000, "Pequeño",
+                ifelse(Datos.Jaen$Poblacion<4500, "Mediano",
+                       ifelse(Datos.Jaen$Poblacion>=4500, "Grande", "")))
+summary(Datos.Jaen)
+head(Datos.Jaen)
+```
+
+3. Calcular los siguientes promedios que se especifican a continuación y añadirlos como nuevas variables al fichero Datos.Jaen obtenidas a partir de las variables existentes
+- Variable elec.hab que contendrá el consumo de energía eléctrica por habitante, obtenida como Consumo.de.energia.electrica/Poblacion
+- Variable agua.hab que contendrá el consumo medio de agua por habitante y día, obtenida como (Consumo.de.agua..Invierno + Consumo.de.agua..V erano)/Poblacion
+- Variable res.hab que contendrá los residuos sólidos urbanos por habitante, obtenida como Residuos.solidos.urbanos..Cantidad/Poblacion
+```{r}
+Datos.Jaen$elec.hab<-Datos.Jaen$ConsumoEE/Datos.Jaen$Poblacion
+Datos.Jaen$agua.hab<-(Datos.Jaen$ConsumoAguaInv+Datos.Jaen$ConsumoAguaVer)/Datos.Jaen$Poblacion
+Datos.Jaen$res.hab<-Datos.Jaen$ResiduosSolidosCant/Datos.Jaen$Poblacion
+head(Datos.Jaen)
+```
+
+
+4. Crear una nueva hoja de datos con todas las variables que contiene actualmente el data frame Datos.Jaen, pero referida sólo a los municipios de tamaño mediano y denominarla Datos.Jaen.Medianos
+```{r}
+Datos.Jaen.Medianos<-subset(Datos.Jaen, Datos.Jaen$Tamanyo=="Mediano")
+```
+
+5. Guardar la hoja de datos Datos.Jaen con las nuevas variables creadas en los apartados anteriores y la hoja que contiene los datos de las poblaciones medianas (Datos.Jaen.Medianos) en un archivo de datos de R y llamadlo JaenIndicadores.RData
+A partir de ahora empezaremos a cargar desde aquí
+```{r}
+load("JaenIndicadores.RData")
+```
+
+
+ARCHIVO DE ANDALUCÍA
+
+1. Importar el fichero Andalucia.txt y denominar a la hoja de datos (data frame) Datos.Andalucia. Comprobar si en el archivo .txt hay datos faltantes y cómo están codificados.
+```{r}
+Datos.Andalucia<-read.table("Andalucia.txt", sep="\t", header = T, fileEncoding = "latin1", na.strings = c("..", "-", ""))
+summary(Datos.Andalucia)
+```
+
+
+Observamos que las variables Tasa.actividad.2001 y Edad.media.2007 contiene , en lugar de . para los decimales, así que convertimos a numérico las variables sustituyendo previamente las ',' por '.'
+```{r}
+Datos.Andalucia$Tasa.actividad.2001<-as.numeric(gsub(",", ".", Datos.Andalucia$Tasa.actividad.2001))
+Datos.Andalucia$Edad.media.2007<-as.numeric(gsub(",", ".", Datos.Andalucia$Edad.media.2007))
+summary(Datos.Andalucia)
+head(Datos.Andalucia)
+```
+
+
+2. A partir de la variable código INE, construir una variable tipo factor que distinga la provincia de pertenencia de cada municipio, denominarla “Provincia” y añadirla al data frame
+```{r}
+Datos.Andalucia$Provincia<-ifelse(Datos.Andalucia$Codigo.INE)
+```
