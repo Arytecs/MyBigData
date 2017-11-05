@@ -85,5 +85,122 @@ head(Datos.Andalucia)
 
 2. A partir de la variable código INE, construir una variable tipo factor que distinga la provincia de pertenencia de cada municipio, denominarla “Provincia” y añadirla al data frame
 ```{r}
-Datos.Andalucia$Provincia<-ifelse(Datos.Andalucia$Codigo.INE)
+library(car)
+Datos.Andalucia$Provincia<-recode(Datos.Andalucia$Codigo.INE,"4000:4999='Almería';11000:11999='Cádiz';14000:14999='Córdoba';18000:18999='Granada';21000:21999='Huelva';23000:23999='Jaén';29000:29999='Málaga';41000:41999='Sevilla'", as.factor.result=TRUE)
 ```
+
+Obtener la distribución de frecuencias absolutas y relativas, un diagrama de barras con las frecuencias absolutas y un diagrama de sectores con las frecuencias relativas en porcentajes de esta variable tipo factor. ¿Qué provincia tiene más municipios? ¿Cuál tiene menos? ¿Qué porcentaje representa en cada caso?
+```{r}
+Provincia<-table(Datos.Andalucia$Provincia)
+Provincia
+
+Provincia.rel<-prop.table(Provincia)
+Provincia.rel<-round(Provincia.rel*100, 2)
+Provincia.rel
+
+Provincia.barras<-barplot(Provincia, xlab="Municipios por Provincias", ylab="Frecuencias Absolutas", col=rainbow(8))
+title(main="Distribución de Frecuencias Absolutas de Municipios por provincias en Andalucía", font.main=3)
+text(Provincia.barras,Provincia + 8,labels=Provincia, xpd = TRUE)
+
+
+Provincia.sector<-pie(Provincia.rel,paste(names(Provincia.rel),Provincia.rel,"%"),main="Distribución de porcentajes de la variable Provincia", col=rainbow(8))
+```
+
+
+
+La provincia con más municipios es Granada con 168 municipios, lo que supone un 21.82% de municipios.
+La provincia con menos municipios es Cádiz con 44 municipios, lo que supone un 5.71% de municipios.
+
+
+
+3. Obtener un resumen descriptivo de la variable tasa de actividad de 2001 que incluya parámetros de posición, dispersión, asimetría y curtosis, histograma y diagrama de caja.
+```{r}
+library("e1071")
+Tasa.frecAbs<-table(Datos.Andalucia$Tasa.actividad.2001)
+Tasa.mean<-mean(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.median<-median(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.quan1<-as.numeric(quantile(Datos.Andalucia$Tasa.actividad.2001, probs = 0.25, na.rm = T))
+Tasa.quan3<-as.numeric(quantile(Datos.Andalucia$Tasa.actividad.2001, probs = 0.75, na.rm = T))
+Tasa.moda<-Tasa.frecAbs[which(Tasa.frecAbs == max(Tasa.frecAbs))[1]]
+Tasa.min<-min(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.max<-max(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.sd<-sd(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.var<-var(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.cv<-Tasa.sd/Tasa.mean
+Tasa.ri<-Tasa.quan3-Tasa.quan1
+Tasa.rango<-Tasa.max - Tasa.min
+Tasa.asi<-skewness(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+Tasa.kurt<-kurtosis(Datos.Andalucia$Tasa.actividad.2001, na.rm = T)
+
+Tasa.resumen<-data.frame(Tasa.mean, Tasa.median, Tasa.quan1, Tasa.quan3, Tasa.moda, Tasa.sd, Tasa.var, Tasa.cv, Tasa.ri, Tasa.rango, Tasa.asi, Tasa.kurt)
+Tasa.resumen
+hist(Datos.Andalucia$Tasa.actividad.2001, breaks=10, freq = T, main = "Histograma de la Tasa de Actividad en 2001", xlab="Actividad", ylab="Frecuencias", col="lightblue", border="blue")
+
+boxplot(Datos.Andalucia$Tasa.actividad.2001, main="Diagrama de caja para la tasa de Actividad en 2001", ylab="Actividad", col="lightblue")
+identify(rep(1, length(Datos.Andalucia$Tasa.actividad.2001)),Datos.Andalucia$Tasa.actividad.2001, rownames(Datos.Andalucia))
+```
+
+
+- ¿Cuál es la tasa media de actividad de los municipios andaluces? ¿Crees que este valor es adecuado para representar la Tasa de Actividad de los municipios andaluces durante 2001?
+La tasa media de actividad de los municipios andaluces es 51.44. Observando la desviación típica, vemos que la dispersión respecto a la media es muy grande, por lo que la media es poco representativa para estos municipios. 
+- ¿Cómo valoras la homogeneidad de los valores de la tasa de actividad en los municipios andaluces? ¿Qué parámetro elegirías para representar la dispersión de la Tasa de Actividad de 2001?
+Los valores de la tasa de actividad en los municipios Andaluces no es homogéneo dado qie la desviación típica toma un valor muy elevado, por lo que hay demasiada dispersión en las observaciones. El parámetro observado para fijarnos en la dispersión es la desviación típica, la varianza, el rango, el coeficiente de variación y el recorrido intercuartílico.
+- ¿En ese sentido, qué municipios andaluces destacan significativamente del resto (como atípicos) por su alta tasa de actividad y por su baja tasa de actividad? ¿Se te ocurre alguna explicación al respecto?
+```{r}
+Datos.Andalucia$Municipio[which(Datos.Andalucia$Tasa.actividad.2001 < Tasa.quan1-Tasa.ri*1.5)]
+Datos.Andalucia$Municipio[which(Datos.Andalucia$Tasa.actividad.2001 > Tasa.quan3+Tasa.ri*1.5)]
+```
+Destacan por debajo los municipios de Benitagla y Lobras, y por encima Vícar, El Ejido, La Mojonera, Alcalá del Valle y Castilleja de Guzmán. Estas diferencias se debe a la cantidad de población que hay en cada uno de los municipios. Por lo que si es un municipio con mucha población, la Tasa de actividad será más elevada que en un municipio con poca población.
+
+- ¿Cómo valoras la simetría de la distribución de frecuencias?
+
+
+
+4. Obtener un gráfico de caja de la Tasa de actividad en 2001 en función de la provincia y describe brevemente la información que contienen los datos a partir del gráfico.
+```{r}
+boxplot(Datos.Andalucia$Tasa.actividad.2001 ~ Datos.Andalucia$Provincia)
+```
+5. Guardar la hoja de datos Datos.Andalucia con la nueva variable creada en los apartados anteriores junto con los parámetros obtenidos en un archivo de datos de R y llámalo Andalucia.RData.
+```{r}
+save(Datos.Andalucia, file="Andalucia.RData")
+```
+
+
+
+3. Distribuciones de probabilidad
+1. Consideremos una variable aleatoria que sigue una distribución B (15, 0.33). Se pide:
+- ¿Qué valor de la variable deja por debajo de sí el 75% de la probabilidad?
+```{r}
+qbinom(0.75, size=15, prob=0.33, lower.tail = T)
+```
+
+- Calcular el percentil 95% de la distribución.
+```{r}
+qbinom(0.95, size=15, prob=0.33, lower.tail = T)
+```
+
+- Obtener una muestra de tamaño 1000 de esta distribución, representarla gráficamente las frecuencias observadas de cada valor de la distribución mediante un diagrama de barras y comparar éste con las frecuencias esperadas según el modelo que genera los datos.
+```{r}
+muestra<-rnbinom(1000, 15, 0.33)
+c1<-0
+c2<-trunc(qbinom(prob=0.33, size=15))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
