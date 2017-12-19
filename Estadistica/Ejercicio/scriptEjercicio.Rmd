@@ -181,21 +181,48 @@ qbinom(0.95, size=15, prob=0.33, lower.tail = T)
 
 - Obtener una muestra de tamaño 1000 de esta distribución, representarla gráficamente las frecuencias observadas de cada valor de la distribución mediante un diagrama de barras y comparar éste con las frecuencias esperadas según el modelo que genera los datos.
 ```{r}
-muestra<-rnbinom(1000, 15, 0.33)
+muestra<-rbinom(1000, 15, 0.33)
 c1<-0
-c2<-trunc(qbinom(prob=0.33, size=15))
+c2<-trunc(qbinom(0.9999, 15, 0.33))
+hist(muestra, breaks = c1:c2, freq=T, xlab="muestra", ylab="Frecuencia absoluta", main="Histograma", col="lightblue", border="blue")
+lines(c1:c2, dbinom(c1:c2, 15, 0.33)*1000, type="l", col="red", xpd=T)
 ```
 
 
+3.2. Consideremos una variable aleatoria W con distribución N (250, 13). Se pide:
+- P [240 < W ≤ 245.5]
+```{r}
+m<-250
+sigma<-13
+pnorm(245.5, mean=m, sd=sigma, lower.tail = T ) - pnorm(240, mean=m, sd=sigma, lower.tail = T)
+```
 
+- P [W ≥ 256].
+```{r}
+pnorm(256, mean=m, sd=sigma, lower.tail = F)
+```
+- Si queremos desechar el 5% de valores más altos de la distribución y el 5% de valores más bajos, ¿con qué intervalo de valores nos quedaremos?
+```{r}
+v1<-round(qnorm(0.05, m, sigma))
+v2<-round(qnorm(0.05, m, sigma, lower.tail = F))
+```
+El intervalo sería [229,271] en esta muestra
 
+- Obtener una muestra de tamaño 1000 de la distribución, representar la función de densidad de esta distribución y compararla con el histograma de la muestra obtenida
+```{r}
+muestra<-rnorm(1000, m, sigma)
+int<-round(sqrt(1000), 0)
+hist(muestra, breaks=int, freq=F, xlab="muestra", ylab="Densidad", main="Histograma", col="lightblue", border="blue")
+lines(muestra, dnorm(muestra,m,sigma), type="p", col="red")
+```
 
-
-
-
-
-
-
+4. Contrastes de Hipótesis e Intervalos de Confianza
+```{r}
+load("Temperatura.RData")
+summary(Temper)
+temp.A<-Temper[Temper$Estacion=="A",]
+temp.B<-Temper[Temper$Estacion=="B",]
+```
 
 
 
